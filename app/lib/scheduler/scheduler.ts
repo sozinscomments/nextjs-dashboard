@@ -13,7 +13,7 @@ type scheduledTask = {
   startTimes: number[];
   endTimes: number[];
 };
-function scheduleTasks(
+export function scheduleTasks(
   startDate: Date,
   endDate: Date,
   tasks: { duration: number; name: string; continuous: boolean }[],

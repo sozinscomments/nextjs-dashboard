@@ -28,6 +28,55 @@ export async function authenticate(
 
 //we don't have an action for signing out since its so simple, just write the server action in sidenav.tsx
 
+const TaskSchema = z.object({
+  name: z.string(),
+  continuous: z.boolean(),
+  duration: z.number(),
+});
+
+export type TaskState = {
+  errors?: {
+    name?: string[];
+    continuous?: string[];
+    duration?: string[];
+  };
+  message?: string | null;
+};
+
+export function validateTask(prevState: TaskState, formData: FormData) {
+  const validatedFields = TaskSchema.safeParse({
+    name: formData.get("name"),
+    continuous: formData.get("continuous"),
+    duration: formData.get("duration"),
+  });
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: "Missing Fields. Failed to add tasks.",
+    };
+  }
+  return validatedFields.data;
+}
+
+export async function sendNewTasks(
+  tasks: { name: string; continuous: boolean; duration: number }[]
+) {
+  //TODO: create this table, either on vercel or through a file here.
+  for (const { name, continuous, duration } of tasks) {
+    try {
+      await sql`
+      INSERT INTO invoices (name, continous, duration)
+      VALUES (${name}, ${continuous}, ${duration})
+    `;
+    } catch (error) {
+      return { message: "Database Error: Failed to Create Invoice" };
+    }
+  }
+  //TODO: Decide where these redirect
+  revalidatePath("/dashboard/invoices");
+  redirect("/dashboard/invoices");
+}
+
 const FormSchema = z.object({
   id: z.string(),
   customerId: z.string({
