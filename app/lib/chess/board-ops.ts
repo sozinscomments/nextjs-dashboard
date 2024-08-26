@@ -14,6 +14,7 @@ export class ChessBoard {
     private currentTurn: Player;
     private inCheck: Map<Player, boolean>;
     private kings: Map<Player, [number, number]>;
+    private checkmate: boolean;
 
     constructor() {
         this.board = [
@@ -35,6 +36,7 @@ export class ChessBoard {
             [Player.Black, [0, 4]],
             [Player.White, [7, 4]],
         ]);
+        this.checkmate = false;
     }
 
     private withinBounds(pos: [number, number]) {
@@ -153,7 +155,7 @@ export class ChessBoard {
         king: number,
         startPos: [number, number],
         func: (start: [number, number]) => [number, number]
-    ): boolean {
+    ): [number, number] | undefined {
         let pos = func(startPos);
         while (this.withinBounds(pos)) {
             const otherPiece = this.board[pos[0]][pos[1]];
@@ -167,62 +169,61 @@ export class ChessBoard {
                 Math.sign(otherPiece) !== Math.sign(king)
             ) {
                 if (Math.abs(otherPiece) === 2 || Math.abs(otherPiece) === 5) {
-                    return true;
+                    return pos;
                 } else {
                     break;
                 }
             }
             pos = func(pos);
         }
-        return false;
+        return undefined;
     }
 
     /**
      * helper for isInCheck. Takes a function that generates a next position
      */
     private checkDiagonalPath(
-        king: number,
+        piece: number,
         startPos: [number, number],
         func: (start: [number, number]) => [number, number]
-    ): boolean {
+    ): [number, number] | undefined {
         let pos = func(startPos);
         while (this.withinBounds(pos)) {
             const otherPiece = this.board[pos[0]][pos[1]];
             //if we run into the same color piece, break
-            if (Math.sign(otherPiece) === Math.sign(king)) {
+            if (Math.sign(otherPiece) === Math.sign(piece)) {
                 break;
             }
             //if we run into a different color piece, check if that piece is a bishop or queen. If it is, return true. else if the piece is a pawn and is one away from start pos, return true. else, break
             else if (
                 otherPiece !== 0 &&
-                Math.sign(otherPiece) !== Math.sign(king)
+                Math.sign(otherPiece) !== Math.sign(piece)
             ) {
                 if (Math.abs(otherPiece) === 4 || Math.abs(otherPiece) === 5) {
-                    return true;
+                    return pos;
                 } else if (
                     Math.abs(otherPiece) === 1 &&
                     Math.abs(pos[0] - startPos[0]) === 1
                 ) {
-                    return true;
+                    return pos;
                 } else {
                     break;
                 }
             }
             pos = func(pos);
         }
-        return false;
+        return undefined;
     }
 
     /**
-     * checks whether player is in check
-     * @param player
-     * @returns
+     * logic used to determine if a piece can be taken by an enemy piece in one move, used to determine if a king is in check or if a piece isn't causing checkmate
+     * @param pos
      */
-    private isInCheck(player: Player): boolean {
-        const pos = this.kings.get(player);
-        assert(pos !== undefined);
+    private isInDangerFrom(pos: [number, number]) {
         const [row, col] = pos;
-        const king = this.board[row][col];
+        const piece = this.board[row][col];
+
+        const ans = [];
 
         //check possible knight positions
         const possibleKnightDistances = [
@@ -235,7 +236,7 @@ export class ChessBoard {
             [-1, -2],
             [-2, -1],
         ];
-        //check above
+        let fromKnight: [number, number] | undefined;
         for (const distance of possibleKnightDistances) {
             const knightPos: [number, number] = [
                 pos[0] + distance[0],
@@ -245,85 +246,105 @@ export class ChessBoard {
                 const knight = this.board[knightPos[0]][knightPos[1]];
                 if (
                     Math.abs(knight) === 3 &&
-                    Math.sign(knight) !== Math.sign(king)
+                    Math.sign(knight) !== Math.sign(piece)
                 ) {
-                    return true;
+                    fromKnight = knightPos;
+                    break;
                 }
             }
         }
+        if (fromKnight) {
+            ans.push(fromKnight);
+        }
+
+        //check above
         const fromAbove = this.checkStraightPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] - 1, start[1]]
         );
         if (fromAbove) {
-            return true;
+            ans.push(fromAbove);
         }
         //check below
         const fromBelow = this.checkStraightPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] + 1, start[1]]
         );
         if (fromBelow) {
-            return true;
+            ans.push(fromBelow);
         }
         //check to the left
         const fromLeft = this.checkStraightPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0], start[1] - 1]
         );
         if (fromLeft) {
-            return true;
+            ans.push(fromLeft);
         }
         //check to the right
         const fromRight = this.checkStraightPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0], start[1] + 1]
         );
         if (fromRight) {
-            return true;
+            ans.push(fromRight);
         }
         //check above left
         const fromAboveLeft = this.checkDiagonalPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] - 1, start[1] - 1]
         );
         if (fromAboveLeft) {
-            return true;
+            ans.push(fromAboveLeft);
         }
         //check above right
         const fromAboveRight = this.checkDiagonalPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] - 1, start[1] + 1]
         );
         if (fromAboveRight) {
-            return true;
+            ans.push(fromAboveRight);
         }
         //check below right
         const fromBelowRight = this.checkDiagonalPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] + 1, start[1] + 1]
         );
         if (fromBelowRight) {
-            return true;
+            ans.push(fromBelowRight);
         }
         //check below left
         const fromBelowLeft = this.checkDiagonalPath(
-            king,
+            piece,
             pos,
             (start: [number, number]) => [start[0] + 1, start[1] - 1]
         );
         if (fromBelowLeft) {
-            return true;
+            ans.push(fromBelowLeft);
         }
+        assert(
+            ans.length <= 2,
+            "Cannot be in check from more than two pieces at once"
+        );
+        return ans;
+    }
 
-        return false;
+    /**
+     * checks whether player is in check and returns an array of all the avenues through which it is in check
+     * @param player
+     * @returns
+     */
+    private isInCheckFrom(player: Player): [number, number][] {
+        const pos = this.kings.get(player);
+        assert(pos !== undefined);
+        return this.isInDangerFrom(pos);
     }
 
     /**
@@ -341,6 +362,7 @@ export class ChessBoard {
         //                  if only one piece, look if another piece could take the piece putting it in check, then simulate this move and see if the king is still in check (remember to undo mutation).
         //                  If that doesn't work, determine if any pieces could move to block.
         //                  if not, declare checkmate.
+        //TODO: Logic for stalemate. Maybe just give them an option to declare stalemate.
         const piece = Math.abs(this.board[startPos[0]][startPos[1]]);
         const originalEnd = this.board[endPos[0]][endPos[1]];
         const originalKings = new Map(this.kings);
@@ -476,11 +498,12 @@ export class ChessBoard {
         } else {
             otherPlayer = Player.White;
         }
-        const otherPlayerInCheck = this.isInCheck(otherPlayer);
+        const otherPlayerInCheckFrom = this.isInCheckFrom(otherPlayer);
+        const otherPlayerInCheck = otherPlayerInCheckFrom.length > 0;
         this.inCheck.set(otherPlayer, otherPlayerInCheck);
 
         //your turn put yourself in check, undo everything
-        if (this.isInCheck(this.currentTurn)) {
+        if (this.isInCheckFrom(this.currentTurn)) {
             //restore board and throw error
             this.board[startPos[0]][startPos[1]] =
                 this.board[endPos[0]][endPos[1]];
@@ -490,9 +513,210 @@ export class ChessBoard {
             throw new Error("Cannot end turn in check");
         }
 
+        //TODO: move this to checkmate helper
         //check if checkmate
-        if (otherPlayerInCheck) {
-            //this.isCheckmate(otherPlayer)
+        if (otherPlayerInCheckFrom) {
+            //save the original king positions
+            const originalKingsForCheckmate = new Map(this.kings);
+            let checkmate = true;
+            //simulate all 8 possible king movements.
+            const movements = [
+                [0, 1],
+                [1, 0],
+                [0, -1],
+                [-1, 0],
+                [1, 1],
+                [1, -1],
+                [-1, 1],
+                [-1, -1],
+            ];
+            const kingPosition = this.kings.get(otherPlayer);
+            assert(kingPosition !== undefined);
+            const king = this.board[kingPosition[0]][kingPosition[1]];
+            for (const movement of movements) {
+                const newKingPosition: [number, number] = [
+                    kingPosition[0] + movement[0],
+                    kingPosition[1] + movement[1],
+                ];
+                const currentPiece =
+                    this.board[newKingPosition[0]][newKingPosition[1]];
+                //if we are within the board bounds, and either we're moving to an empty square or taking an enemy piece
+                if (
+                    this.withinBounds(newKingPosition) &&
+                    (currentPiece === 0 ||
+                        Math.sign(king) !== Math.sign(currentPiece))
+                ) {
+                    //make the change, then check if its in check.
+                    this.board[newKingPosition[0]][newKingPosition[1]] = king;
+                    this.board[kingPosition[0]][kingPosition[1]] = 0;
+                    this.kings.set(otherPlayer, newKingPosition);
+                    const stillInCheck: boolean =
+                        this.isInCheckFrom(otherPlayer).length > 0;
+                    //undo mutation
+                    this.board[kingPosition[0]][kingPosition[1]] = king;
+                    this.board[newKingPosition[0]][newKingPosition[1]] =
+                        currentPiece;
+                    this.kings = originalKingsForCheckmate;
+
+                    if (!stillInCheck) {
+                        checkmate = false;
+                        break;
+                    }
+                }
+            }
+            //if we still haven't ruled out checkmate and not in check from multiple pieces, find the piece that it's in check from.
+            if (checkmate && otherPlayerInCheckFrom.length === 1) {
+                const offendingPiecePosition = otherPlayerInCheckFrom[0];
+                //using the same logic we use to determine if a king is in check, see if you can take the offending piece
+                //Note that we can use the same logic (not care about the king taking it) because if the king could take it we would've discovered in the previous check.
+                if (this.isInDangerFrom(offendingPiecePosition).length > 0) {
+                    //TODO: Potential optimization, don't actually need to get a full list (don't care if its in danger from several pieces), just need true or false. Can have optimized function that breaks.
+                    checkmate = false;
+                }
+                //if the offending piece is not a knight, try to block its path
+                const offendingPiece =
+                    this.board[offendingPiecePosition[0]][
+                        offendingPiecePosition[1]
+                    ];
+                if (!checkmate && Math.abs(offendingPiece) !== 3) {
+                    if (kingPosition[0] === offendingPiecePosition[0]) {
+                        //TODO: try to refacor this into a helper, since shares a lot of logic with isPathClear
+                        //straight line
+                        const row = kingPosition[0];
+                        const start = Math.min(
+                            kingPosition[1],
+                            offendingPiecePosition[1]
+                        );
+                        const end = Math.max(
+                            kingPosition[1],
+                            offendingPiecePosition[1]
+                        );
+                        for (let i = start + 1; i < end; i++) {
+                            //insert a piece in between of the same type as the offending piece, check if its in danger, if it is the other team can block the path
+                            const originalVal = this.board[row][i];
+                            this.board[row][i] = offendingPiece;
+                            if (this.isInDangerFrom([row, i]).length > 0) {
+                                //note that this works because we do not consider the king as being able to endanger a piece
+                                checkmate = false;
+                                //undo mutation and break
+                                this.board[row][i] = originalVal;
+                                break;
+                            }
+                            //undo mutation
+                            this.board[row][i] = originalVal;
+                        }
+                    } else if (kingPosition[1] === offendingPiecePosition[1]) {
+                        const col = kingPosition[1];
+                        const start = Math.min(
+                            kingPosition[0],
+                            offendingPiecePosition[0]
+                        );
+                        const end = Math.max(
+                            kingPosition[0],
+                            offendingPiecePosition[0]
+                        );
+                        for (let i = start + 1; i < end; i++) {
+                            const originalVal = this.board[i][col];
+                            this.board[i][col] = offendingPiece;
+                            if (this.isInDangerFrom([i, col]).length > 0) {
+                                checkmate = false;
+                                //undo mutation and break
+                                this.board[i][col] = originalVal;
+                                break;
+                            }
+                            //undo mutation
+                            this.board[i][col] = originalVal;
+                        }
+                    } else {
+                        assert(
+                            Math.abs(
+                                kingPosition[0] - offendingPiecePosition[0]
+                            ) ===
+                                Math.abs(
+                                    kingPosition[1] - offendingPiecePosition[1]
+                                ),
+                            "cannot be in check from a piece that isn't horizontal, vertical, or diagonal"
+                        );
+                        if (
+                            Math.sign(
+                                kingPosition[0] - offendingPiecePosition[0]
+                            ) ===
+                            Math.sign(
+                                kingPosition[1] - offendingPiecePosition[1]
+                            )
+                        ) {
+                            const startRow = Math.min(
+                                kingPosition[0],
+                                offendingPiecePosition[0]
+                            );
+                            const startCol = Math.min(
+                                kingPosition[1],
+                                offendingPiecePosition[1]
+                            );
+                            const endRow = Math.max(
+                                kingPosition[0],
+                                offendingPiecePosition[0]
+                            );
+                            const spaceBetween = endRow - startRow;
+                            for (let i = 1; i < spaceBetween; i++) {
+                                const originalVal =
+                                    this.board[startRow + i][startCol + i];
+                                this.board[startRow + i][startCol + i] =
+                                    offendingPiece;
+                                if (
+                                    this.isInDangerFrom([
+                                        startRow + i,
+                                        startCol + i,
+                                    ]).length > 0
+                                ) {
+                                    checkmate = false;
+                                    //undo mutation and break
+                                    this.board[startRow + i][startCol + i] =
+                                        originalVal;
+                                    break;
+                                }
+                                //undo mutation
+                                this.board[startRow + i][startCol + i] =
+                                    originalVal;
+                            }
+                        } else {
+                            const startRow = Math.min(
+                                kingPosition[0],
+                                offendingPiecePosition[0]
+                            );
+                            const startCol = Math.max(
+                                kingPosition[1],
+                                offendingPiecePosition[1]
+                            );
+                            const endRow = Math.max(
+                                kingPosition[0],
+                                offendingPiecePosition[0]
+                            );
+                            const spaceBetween = endRow - startRow;
+                            for (let i = 1; i < spaceBetween; i++) {
+                                const originalVal =
+                                    this.board[startRow + i][startCol - i];
+                                this.board[startRow + i][startCol - i] =
+                                    offendingPiece;
+                                if (
+                                    this.board[startRow + i][startCol - i] !== 0
+                                ) {
+                                    checkmate = false;
+                                    //undo mutation and break
+                                    this.board[startRow + i][startCol - i] =
+                                        originalVal;
+                                    break;
+                                }
+                                //undo mutation
+                                this.board[startRow + i][startCol - i] =
+                                    originalVal;
+                            }
+                        }
+                    }
+                }
+            }
+
+            this.checkmate = checkmate;
         }
     }
 
