@@ -1,4 +1,4 @@
-import assert from "assert";
+import * as assert from "assert";
 
 /**
  * Represent a chessboard, where empty squares are 0, black pieces are negative (-1=pawn, -2=rook, -3=knight, -4=bishop, -5=queen, -6=king)
@@ -219,7 +219,7 @@ export class ChessBoard {
      * logic used to determine if a piece can be taken by an enemy piece in one move, used to determine if a king is in check or if a piece isn't causing checkmate
      * @param pos
      */
-    private isInDangerFrom(pos: [number, number]) {
+    private isInDangerFrom(pos: [number, number]): [number, number][] {
         const [row, col] = pos;
         const piece = this.board[row][col];
 
@@ -329,193 +329,18 @@ export class ChessBoard {
         if (fromBelowLeft) {
             ans.push(fromBelowLeft);
         }
-        assert(
+        assert.ok(
             ans.length <= 2,
             "Cannot be in check from more than two pieces at once"
         );
         return ans;
     }
 
-    /**
-     * checks whether player is in check and returns an array of all the avenues through which it is in check
-     * @param player
-     * @returns
-     */
-    private isInCheckFrom(player: Player): [number, number][] {
-        const pos = this.kings.get(player);
-        assert(pos !== undefined);
-        return this.isInDangerFrom(pos);
-    }
-
-    /**
-     * helper function that mutates the board to execute a turn and throws an error if the turn cannot be done by the rules of chess
-     * @param startPos
-     * @param endPos
-     */
-    private moveHelper(
-        startPos: [number, number],
-        endPos: [number, number]
+    private checkmateHelper(
+        otherPlayer: Player,
+        otherPlayerInCheckFrom: [number, number][]
     ): void {
-        //TODO: impliment check logic. can do this efficiently by keeping track of both kings' positions in the rep, then after every move, looking at all 8 posible lines (start from the king, go until you hit a piece) to a king and all 8 possible knight positions.
-        //TODO: impliment checkmate logic. First look if the king can move to a position where it is not in check (this should cover the case where it takes the piece putting it in check without special logic).
-        //          If it can't move, determine how many pieces are putting it in check. If its more than one, declare checkmate.
-        //                  if only one piece, look if another piece could take the piece putting it in check, then simulate this move and see if the king is still in check (remember to undo mutation).
-        //                  If that doesn't work, determine if any pieces could move to block.
-        //                  if not, declare checkmate.
-        //TODO: Logic for stalemate. Maybe just give them an option to declare stalemate.
-        const piece = Math.abs(this.board[startPos[0]][startPos[1]]);
-        const originalEnd = this.board[endPos[0]][endPos[1]];
-        const originalKings = new Map(this.kings);
-        const originalInCheck = new Map(this.inCheck);
-
-        //pawn
-        if (piece == 1) {
-            //must move up the board
-            if (this.currentTurn === Player.White) {
-                if (
-                    startPos[0] === endPos[0] - 1 &&
-                    startPos[1] === endPos[1] &&
-                    this.board[endPos[0]][endPos[1]] === 0
-                ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
-                    //TODO: Implement pawn promotion logic
-                } else if (
-                    startPos[0] === endPos[0] - 1 &&
-                    Math.abs(startPos[1] - endPos[1]) === 1
-                ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
-                    //TODO: Implement pawn promotion logic
-                } else {
-                    throw new Error(`invalid move for pawn at ${startPos}`);
-                }
-            }
-            //must move down the board
-            else {
-                if (
-                    startPos[0] === endPos[0] + 1 &&
-                    startPos[1] === endPos[1] &&
-                    this.board[endPos[0]][endPos[1]] === 0
-                ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
-                    //TODO: Implement pawn promotion logic
-                } else if (
-                    startPos[0] === endPos[0] + 1 &&
-                    Math.abs(startPos[1] - endPos[1]) === 1
-                ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
-                    //TODO: Implement pawn promotion logic
-                } else {
-                    throw new Error(`invalid move for pawn at ${startPos}`);
-                }
-            }
-        }
-
-        //rook
-        else if (piece == 2) {
-            if (
-                (startPos[1] === endPos[1] || startPos[0] === endPos[0]) &&
-                this.isPathClear(startPos, endPos)
-            ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
-            } else {
-                throw new Error(
-                    `invalid move for rook at position ${startPos}`
-                );
-            }
-        }
-
-        //knight
-        else if (piece == 3) {
-            if (this.isKnightPath(startPos, endPos)) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
-            } else {
-                throw new Error(
-                    `invalid move for knight at position ${startPos}`
-                );
-            }
-        }
-
-        //bishop
-        else if (piece == 4) {
-            if (
-                Math.abs(startPos[1] - endPos[1]) ===
-                    Math.abs(startPos[1] - endPos[1]) &&
-                this.isPathClear(startPos, endPos)
-            ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
-            } else {
-                throw new Error(
-                    `invalid move for bishop at position ${startPos}`
-                );
-            }
-        }
-
-        //queen
-        else if (piece == 5) {
-            if (this.isPathClear(startPos, endPos)) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
-            } else {
-                throw new Error(
-                    `invalid move for queen at position ${startPos}`
-                );
-            }
-        }
-
-        //king
-        else if (piece == 6) {
-            if (
-                this.isOneApart(startPos, endPos) &&
-                this.farEnoughFromOtherKing(startPos, endPos)
-            ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
-                //maintain where the kings are
-                this.kings.set(this.currentTurn, endPos);
-            }
-        }
-
-        //your turn put the other player in check, handled here
-        let otherPlayer: Player;
-        if (this.currentTurn === Player.White) {
-            otherPlayer = Player.Black;
-        } else {
-            otherPlayer = Player.White;
-        }
-        const otherPlayerInCheckFrom = this.isInCheckFrom(otherPlayer);
-        const otherPlayerInCheck = otherPlayerInCheckFrom.length > 0;
-        this.inCheck.set(otherPlayer, otherPlayerInCheck);
-
-        //your turn put yourself in check, undo everything
-        if (this.isInCheckFrom(this.currentTurn)) {
-            //restore board and throw error
-            this.board[startPos[0]][startPos[1]] =
-                this.board[endPos[0]][endPos[1]];
-            this.board[endPos[0]][endPos[1]] = originalEnd;
-            this.kings = originalKings;
-            this.inCheck = originalInCheck;
-            throw new Error("Cannot end turn in check");
-        }
-
-        //TODO: move this to checkmate helper
-        //check if checkmate
-        if (otherPlayerInCheckFrom) {
+        if (otherPlayerInCheckFrom.length > 0) {
             //save the original king positions
             const originalKingsForCheckmate = new Map(this.kings);
             let checkmate = true;
@@ -531,36 +356,38 @@ export class ChessBoard {
                 [-1, -1],
             ];
             const kingPosition = this.kings.get(otherPlayer);
-            assert(kingPosition !== undefined);
+            assert.ok(kingPosition !== undefined);
             const king = this.board[kingPosition[0]][kingPosition[1]];
             for (const movement of movements) {
                 const newKingPosition: [number, number] = [
                     kingPosition[0] + movement[0],
                     kingPosition[1] + movement[1],
                 ];
-                const currentPiece =
-                    this.board[newKingPosition[0]][newKingPosition[1]];
-                //if we are within the board bounds, and either we're moving to an empty square or taking an enemy piece
-                if (
-                    this.withinBounds(newKingPosition) &&
-                    (currentPiece === 0 ||
-                        Math.sign(king) !== Math.sign(currentPiece))
-                ) {
-                    //make the change, then check if its in check.
-                    this.board[newKingPosition[0]][newKingPosition[1]] = king;
-                    this.board[kingPosition[0]][kingPosition[1]] = 0;
-                    this.kings.set(otherPlayer, newKingPosition);
-                    const stillInCheck: boolean =
-                        this.isInCheckFrom(otherPlayer).length > 0;
-                    //undo mutation
-                    this.board[kingPosition[0]][kingPosition[1]] = king;
-                    this.board[newKingPosition[0]][newKingPosition[1]] =
-                        currentPiece;
-                    this.kings = originalKingsForCheckmate;
+                if (this.withinBounds(newKingPosition)) {
+                    const currentPiece =
+                        this.board[newKingPosition[0]][newKingPosition[1]];
+                    //if we are within the board bounds, and either we're moving to an empty square or taking an enemy piece
+                    if (
+                        currentPiece === 0 ||
+                        Math.sign(king) !== Math.sign(currentPiece)
+                    ) {
+                        //make the change, then check if its in check.
+                        this.board[newKingPosition[0]][newKingPosition[1]] =
+                            king;
+                        this.board[kingPosition[0]][kingPosition[1]] = 0;
+                        this.kings.set(otherPlayer, newKingPosition);
+                        const stillInCheck: boolean =
+                            this.isInCheckFrom(otherPlayer).length > 0;
+                        //undo mutation
+                        this.board[kingPosition[0]][kingPosition[1]] = king;
+                        this.board[newKingPosition[0]][newKingPosition[1]] =
+                            currentPiece;
+                        this.kings = originalKingsForCheckmate;
 
-                    if (!stillInCheck) {
-                        checkmate = false;
-                        break;
+                        if (!stillInCheck) {
+                            checkmate = false;
+                            break;
+                        }
                     }
                 }
             }
@@ -628,7 +455,7 @@ export class ChessBoard {
                             this.board[i][col] = originalVal;
                         }
                     } else {
-                        assert(
+                        assert.ok(
                             Math.abs(
                                 kingPosition[0] - offendingPiecePosition[0]
                             ) ===
@@ -720,11 +547,188 @@ export class ChessBoard {
         }
     }
 
+    /**
+     * checks whether player is in check and returns an array of all the avenues through which it is in check
+     * @param player
+     * @returns
+     */
+    private isInCheckFrom(player: Player): [number, number][] {
+        const pos = this.kings.get(player);
+        assert.ok(pos !== undefined);
+        return this.isInDangerFrom(pos);
+    }
+
+    /**
+     * helper function that mutates the board to execute a turn and throws an error if the turn cannot be done by the rules of chess
+     * @param startPos
+     * @param endPos
+     */
+    private moveHelper(
+        startPos: [number, number],
+        endPos: [number, number]
+    ): void {
+        //TODO: Logic for stalemate. Maybe just give them an option to declare stalemate.
+        const piece = Math.abs(this.board[startPos[0]][startPos[1]]);
+        const originalEnd = this.board[endPos[0]][endPos[1]];
+        const originalKings = new Map(this.kings);
+        const originalInCheck = new Map(this.inCheck);
+
+        //pawn
+        if (piece === 1) {
+            //must move up the board
+            if (this.currentTurn === Player.White) {
+                if (
+                    startPos[0] === endPos[0] + 1 &&
+                    startPos[1] === endPos[1] &&
+                    this.board[endPos[0]][endPos[1]] === 0
+                ) {
+                    this.board[endPos[0]][endPos[1]] =
+                        this.board[startPos[0]][startPos[1]];
+                    this.board[startPos[0]][startPos[1]] = 0;
+                    //TODO: Implement pawn promotion logic
+                } else if (
+                    startPos[0] === endPos[0] + 1 &&
+                    Math.abs(startPos[1] - endPos[1]) === 1 &&
+                    this.board[endPos[0]][endPos[1]] < 0
+                ) {
+                    this.board[endPos[0]][endPos[1]] =
+                        this.board[startPos[0]][startPos[1]];
+                    this.board[startPos[0]][startPos[1]] = 0;
+                    //TODO: Implement pawn promotion logic
+                } else {
+                    throw new Error(`invalid move for pawn at ${startPos}`);
+                }
+            }
+            //must move down the board
+            else {
+                if (
+                    startPos[0] === endPos[0] - 1 &&
+                    startPos[1] === endPos[1] &&
+                    this.board[endPos[0]][endPos[1]] === 0
+                ) {
+                    this.board[endPos[0]][endPos[1]] =
+                        this.board[startPos[0]][startPos[1]];
+                    this.board[startPos[0]][startPos[1]] = 0;
+                    //TODO: Implement pawn promotion logic
+                } else if (
+                    startPos[0] === endPos[0] - 1 &&
+                    Math.abs(startPos[1] - endPos[1]) === 1 &&
+                    this.board[endPos[0]][endPos[1]] > 0
+                ) {
+                    this.board[endPos[0]][endPos[1]] =
+                        this.board[startPos[0]][startPos[1]];
+                    this.board[startPos[0]][startPos[1]] = 0;
+                    //TODO: Implement pawn promotion logic
+                } else {
+                    throw new Error(`invalid move for pawn at ${startPos}`);
+                }
+            }
+        }
+
+        //rook
+        else if (piece === 2) {
+            if (
+                (startPos[1] === endPos[1] || startPos[0] === endPos[0]) &&
+                this.isPathClear(startPos, endPos)
+            ) {
+                this.board[endPos[0]][endPos[1]] =
+                    this.board[startPos[0]][startPos[1]];
+                this.board[startPos[0]][startPos[1]] = 0;
+            } else {
+                throw new Error(
+                    `invalid move for rook at position ${startPos}`
+                );
+            }
+        }
+
+        //knight
+        else if (piece === 3) {
+            if (this.isKnightPath(startPos, endPos)) {
+                this.board[endPos[0]][endPos[1]] =
+                    this.board[startPos[0]][startPos[1]];
+                this.board[startPos[0]][startPos[1]] = 0;
+            } else {
+                throw new Error(
+                    `invalid move for knight at position ${startPos}`
+                );
+            }
+        }
+
+        //bishop
+        else if (piece === 4) {
+            if (
+                Math.abs(startPos[1] - endPos[1]) ===
+                    Math.abs(startPos[1] - endPos[1]) &&
+                this.isPathClear(startPos, endPos)
+            ) {
+                this.board[endPos[0]][endPos[1]] =
+                    this.board[startPos[0]][startPos[1]];
+                this.board[startPos[0]][startPos[1]] = 0;
+            } else {
+                throw new Error(
+                    `invalid move for bishop at position ${startPos}`
+                );
+            }
+        }
+
+        //queen
+        else if (piece === 5) {
+            if (this.isPathClear(startPos, endPos)) {
+                this.board[endPos[0]][endPos[1]] =
+                    this.board[startPos[0]][startPos[1]];
+                this.board[startPos[0]][startPos[1]] = 0;
+            } else {
+                throw new Error(
+                    `invalid move for queen at position ${startPos}`
+                );
+            }
+        }
+
+        //king
+        else if (piece === 6) {
+            if (
+                this.isOneApart(startPos, endPos) &&
+                this.farEnoughFromOtherKing(startPos, endPos)
+            ) {
+                this.board[endPos[0]][endPos[1]] =
+                    this.board[startPos[0]][startPos[1]];
+                this.board[startPos[0]][startPos[1]] = 0;
+                //maintain where the kings are
+                this.kings.set(this.currentTurn, endPos);
+            }
+        }
+
+        //your turn put the other player in check, handled here
+        let otherPlayer: Player;
+        if (this.currentTurn === Player.White) {
+            otherPlayer = Player.Black;
+        } else {
+            otherPlayer = Player.White;
+        }
+        const otherPlayerInCheckFrom = this.isInCheckFrom(otherPlayer);
+        const otherPlayerInCheck = otherPlayerInCheckFrom.length > 0;
+        this.inCheck.set(otherPlayer, otherPlayerInCheck);
+        console.log("\n incheck ", this.inCheck);
+        //your turn put yourself in check, undo everything
+        if (this.isInCheckFrom(this.currentTurn).length > 0) {
+            //restore board and throw error
+            this.board[startPos[0]][startPos[1]] =
+                this.board[endPos[0]][endPos[1]];
+            this.board[endPos[0]][endPos[1]] = originalEnd;
+            this.kings = originalKings;
+            this.inCheck = originalInCheck;
+            throw new Error("Cannot end turn in check");
+        }
+
+        //check if checkmate
+        this.checkmateHelper(otherPlayer, otherPlayerInCheckFrom); //mutates this.checkmate if checkmate is now true.
+    }
+
     public movePiece(
         startPos: [number, number],
         endPos: [number, number]
     ): void {
-        assert(
+        assert.ok(
             !(startPos[0] === endPos[0] && startPos[1] === endPos[1]),
             "No moving to same point, shouldve been handled as a deselect in frontend"
         );
@@ -749,11 +753,61 @@ export class ChessBoard {
 
         this.moveHelper(startPos, endPos);
 
-        //change turn. Note that this doesn't happen in an error is thrown (nothing should be mutated)
+        //change turn. Note that this doesn't happen in the case that an error is thrown (nothing should be mutated)
         if (this.currentTurn === Player.White) {
             this.currentTurn = Player.Black;
         } else {
             this.currentTurn = Player.White;
         }
     }
+
+    public toString(): string {
+        let ans = "";
+        for (const arr of this.board) {
+            const line = arr.join("\t") + "\n";
+            ans += line;
+        }
+
+        return ans;
+    }
 }
+
+const readline = require("readline");
+
+// Create an interface for readline
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+function askQuestion(query: string): Promise<string> {
+    return new Promise((resolve) => {
+        rl.question(query, (answer: string) => {
+            resolve(answer);
+        });
+    });
+}
+
+async function main() {
+    const chess = new ChessBoard();
+    while (true) {
+        console.log(chess.toString());
+
+        // Wait for user input
+        const startRow = await askQuestion("Please enter start row: ");
+        const startCol = await askQuestion("Please enter start col: ");
+        const startPos: [number, number] = [Number(startRow), Number(startCol)];
+        const endRow = await askQuestion("Please enter end row: ");
+        const endCol = await askQuestion("Please enter end col: ");
+        const endPos: [number, number] = [Number(endRow), Number(endCol)];
+        try {
+            chess.movePiece(startPos, endPos);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    rl.close(); // Close the readline interface when done
+}
+
+main();
