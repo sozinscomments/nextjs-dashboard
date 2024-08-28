@@ -639,7 +639,7 @@ export class ChessBoard {
                     startPos[1] === endPos[1] &&
                     this.board[endPos[0]][endPos[1]] === 0 &&
                     this.board[endPos[0] - 1][endPos[1]] === 0 &&
-                    startPos[0] === 6
+                    startPos[0] === 1
                 ) {
                     this.mutateBoard(startPos, endPos);
                 } else {
