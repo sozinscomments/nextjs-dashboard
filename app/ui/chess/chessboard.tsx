@@ -4,6 +4,8 @@ import * as assert from "assert";
 import { useState, useEffect } from "react";
 import chessboardInstance from "@/app/lib/chess/persistent-chessboard";
 
+let pieces = chessboardInstance.getPieces();
+
 const piecesMap: Map<number, string> = new Map([
     [-6, "/chess_pieces_png/black_k.png"],
     [-5, "/chess_pieces_png/black_q.png"],
@@ -26,9 +28,7 @@ const piecesMap: Map<number, string> = new Map([
  * @returns
  */
 export default function Chessboard() {
-    const [board, setBoard] = useState<number[][]>(
-        chessboardInstance.getPieces()
-    );
+    const [board, setBoard] = useState<number[][]>(pieces);
     // const [ws, setWs] = useState<WebSocket | null>(null);
     // useEffect(() => {
     //     const websocket = new WebSocket("ws://localhost:3000");
@@ -56,13 +56,12 @@ export default function Chessboard() {
         if (selected.length == 2) {
             chessboardInstance.movePiece(selected[0], selected[1]);
             setSelected([]);
-            setBoard(chessboardInstance.getPieces);
+            setBoard(chessboardInstance.getPieces());
         }
     }, [selected]);
 
     const squareSize = 330;
     console.log("hello world from chessboard.tsx");
-    console.log("board", board);
     return (
         <div
             style={{
@@ -83,7 +82,6 @@ export default function Chessboard() {
                 <>
                     {row.map((piece: number, colNum: number) => {
                         const imageSrc = piecesMap.get(piece);
-                        console.log(imageSrc);
                         assert.ok(imageSrc !== undefined);
                         return (
                             <div
@@ -100,7 +98,8 @@ export default function Chessboard() {
                                         rowNum,
                                         colNum,
                                     ];
-                                    setSelected(selected.concat(selection));
+                                    console.log("selection", selection);
+                                    setSelected(selected.concat([selection]));
                                 }}
                             >
                                 <Image

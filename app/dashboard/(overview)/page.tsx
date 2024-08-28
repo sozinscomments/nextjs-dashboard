@@ -43,20 +43,20 @@ import { useState, useEffect } from "react";
 //   );
 // }
 export default async function Page() {
-    const [pieces, setPieces] = useState([]);
-    const [ws, setWs] = useState<WebSocket | null>(null);
+    // const [pieces, setPieces] = useState([]);
+    // const [ws, setWs] = useState<WebSocket | null>(null);
 
-    useEffect(() => {
-        const websocket = new WebSocket("ws://localhost:3000");
-        setWs(websocket);
+    // useEffect(() => {
+    //     const websocket = new WebSocket("ws://localhost:3000");
+    //     setWs(websocket);
 
-        websocket.onmessage = (event) => {
-            const { pieces } = JSON.parse(event.data);
-            setPieces(pieces);
-        };
+    //     websocket.onmessage = (event) => {
+    //         const { pieces } = JSON.parse(event.data);
+    //         setPieces(pieces);
+    //     };
 
-        return () => websocket.close();
-    }, []);
+    //     return () => websocket.close();
+    // }, []);
     console.log("hello world from dashboard page");
     return (
         <div>
