@@ -559,6 +559,19 @@ export class ChessBoard {
     }
 
     /**
+     * helper to actually move piece from startpos to endpos and set startpos to 0.
+     * @param startPos
+     * @param endPos
+     */
+    private mutateBoard(
+        startPos: [number, number],
+        endPos: [number, number]
+    ): void {
+        this.board[endPos[0]][endPos[1]] = this.board[startPos[0]][startPos[1]];
+        this.board[startPos[0]][startPos[1]] = 0;
+    }
+
+    /**
      * helper function that mutates the board to execute a turn and throws an error if the turn cannot be done by the rules of chess
      * @param startPos
      * @param endPos
@@ -582,19 +595,24 @@ export class ChessBoard {
                     startPos[1] === endPos[1] &&
                     this.board[endPos[0]][endPos[1]] === 0
                 ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
+                    this.mutateBoard(startPos, endPos);
                     //TODO: Implement pawn promotion logic
                 } else if (
                     startPos[0] === endPos[0] + 1 &&
                     Math.abs(startPos[1] - endPos[1]) === 1 &&
                     this.board[endPos[0]][endPos[1]] < 0
                 ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
+                    this.mutateBoard(startPos, endPos);
                     //TODO: Implement pawn promotion logic
+                } else if (
+                    //pawn makes two steps on first move
+                    startPos[0] === endPos[0] + 2 &&
+                    startPos[1] === endPos[1] &&
+                    this.board[endPos[0]][endPos[1]] === 0 &&
+                    this.board[endPos[0] + 1][endPos[1]] === 0 &&
+                    startPos[0] === 6
+                ) {
+                    this.mutateBoard(startPos, endPos);
                 } else {
                     throw new Error(`invalid move for pawn at ${startPos}`);
                 }
@@ -606,19 +624,24 @@ export class ChessBoard {
                     startPos[1] === endPos[1] &&
                     this.board[endPos[0]][endPos[1]] === 0
                 ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
+                    this.mutateBoard(startPos, endPos);
                     //TODO: Implement pawn promotion logic
                 } else if (
                     startPos[0] === endPos[0] - 1 &&
                     Math.abs(startPos[1] - endPos[1]) === 1 &&
                     this.board[endPos[0]][endPos[1]] > 0
                 ) {
-                    this.board[endPos[0]][endPos[1]] =
-                        this.board[startPos[0]][startPos[1]];
-                    this.board[startPos[0]][startPos[1]] = 0;
+                    this.mutateBoard(startPos, endPos);
                     //TODO: Implement pawn promotion logic
+                } else if (
+                    //pawn makes two steps on first move
+                    startPos[0] === endPos[0] - 2 &&
+                    startPos[1] === endPos[1] &&
+                    this.board[endPos[0]][endPos[1]] === 0 &&
+                    this.board[endPos[0] - 1][endPos[1]] === 0 &&
+                    startPos[0] === 6
+                ) {
+                    this.mutateBoard(startPos, endPos);
                 } else {
                     throw new Error(`invalid move for pawn at ${startPos}`);
                 }
@@ -631,9 +654,7 @@ export class ChessBoard {
                 (startPos[1] === endPos[1] || startPos[0] === endPos[0]) &&
                 this.isPathClear(startPos, endPos)
             ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
+                this.mutateBoard(startPos, endPos);
             } else {
                 throw new Error(
                     `invalid move for rook at position ${startPos}`
@@ -644,9 +665,7 @@ export class ChessBoard {
         //knight
         else if (piece === 3) {
             if (this.isKnightPath(startPos, endPos)) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
+                this.mutateBoard(startPos, endPos);
             } else {
                 throw new Error(
                     `invalid move for knight at position ${startPos}`
@@ -661,9 +680,7 @@ export class ChessBoard {
                     Math.abs(startPos[1] - endPos[1]) &&
                 this.isPathClear(startPos, endPos)
             ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
+                this.mutateBoard(startPos, endPos);
             } else {
                 throw new Error(
                     `invalid move for bishop at position ${startPos}`
@@ -674,9 +691,7 @@ export class ChessBoard {
         //queen
         else if (piece === 5) {
             if (this.isPathClear(startPos, endPos)) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
+                this.mutateBoard(startPos, endPos);
             } else {
                 throw new Error(
                     `invalid move for queen at position ${startPos}`
@@ -690,9 +705,7 @@ export class ChessBoard {
                 this.isOneApart(startPos, endPos) &&
                 this.farEnoughFromOtherKing(startPos, endPos)
             ) {
-                this.board[endPos[0]][endPos[1]] =
-                    this.board[startPos[0]][startPos[1]];
-                this.board[startPos[0]][startPos[1]] = 0;
+                this.mutateBoard(startPos, endPos);
                 //maintain where the kings are
                 this.kings.set(this.currentTurn, endPos);
             }
@@ -770,44 +783,52 @@ export class ChessBoard {
 
         return ans;
     }
-}
 
-const readline = require("readline");
-
-// Create an interface for readline
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-});
-
-function askQuestion(query: string): Promise<string> {
-    return new Promise((resolve) => {
-        rl.question(query, (answer: string) => {
-            resolve(answer);
-        });
-    });
-}
-
-async function main() {
-    const chess = new ChessBoard();
-    while (true) {
-        console.log(chess.toString());
-
-        // Wait for user input
-        const startRow = await askQuestion("Please enter start row: ");
-        const startCol = await askQuestion("Please enter start col: ");
-        const startPos: [number, number] = [Number(startRow), Number(startCol)];
-        const endRow = await askQuestion("Please enter end row: ");
-        const endCol = await askQuestion("Please enter end col: ");
-        const endPos: [number, number] = [Number(endRow), Number(endCol)];
-        try {
-            chess.movePiece(startPos, endPos);
-        } catch (e) {
-            console.log(e);
-        }
+    /**
+     * return a grid representation of the chess board
+     * Safety from rep exposure: copy the array before sending
+     */
+    public getPieces(): number[][] {
+        return this.board.map((row) => row.slice());
     }
-
-    rl.close(); // Close the readline interface when done
 }
 
-main();
+// const readline = require("readline");
+
+// // Create an interface for readline
+// const rl = readline.createInterface({
+//     input: process.stdin,
+//     output: process.stdout,
+// });
+
+// function askQuestion(query: string): Promise<string> {
+//     return new Promise((resolve) => {
+//         rl.question(query, (answer: string) => {
+//             resolve(answer);
+//         });
+//     });
+// }
+
+// async function main() {
+//     const chess = new ChessBoard();
+//     while (true) {
+//         console.log(chess.toString());
+
+//         // Wait for user input
+//         const startRow = await askQuestion("Please enter start row: ");
+//         const startCol = await askQuestion("Please enter start col: ");
+//         const startPos: [number, number] = [Number(startRow), Number(startCol)];
+//         const endRow = await askQuestion("Please enter end row: ");
+//         const endCol = await askQuestion("Please enter end col: ");
+//         const endPos: [number, number] = [Number(endRow), Number(endCol)];
+//         try {
+//             chess.movePiece(startPos, endPos);
+//         } catch (e) {
+//             console.log(e);
+//         }
+//     }
+
+//     rl.close(); // Close the readline interface when done
+// }
+
+// main();

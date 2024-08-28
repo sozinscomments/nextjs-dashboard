@@ -1,5 +1,5 @@
-import DashboardSkeleton from "../../ui/skeletons";
+import EmptyBoard from "@/app/ui/chess/emptyboard";
 
 export default function Loading() {
-  return <DashboardSkeleton />;
+    return <EmptyBoard />;
 }
