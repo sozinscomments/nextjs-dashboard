@@ -3,6 +3,8 @@ import Image from "next/image";
 import * as assert from "assert";
 import { useState, useEffect } from "react";
 import chessboardInstance from "@/app/lib/chess/persistent-chessboard";
+import { Player } from "@/app/lib/chess/board-ops";
+import { lusitana } from "../fonts";
 
 let pieces = chessboardInstance.getPieces();
 
@@ -52,68 +54,108 @@ export default function Chessboard() {
     // }, []);
 
     const [selected, setSelected] = useState<[number, number][]>([]);
+    const [err, setErr] = useState<string | undefined>();
+    const [turn, setTurn] = useState<Player>(Player.White);
+    const [inCheck, setInCheck] = useState<boolean>(false);
+    const [checkmate, setCheckmate] = useState<boolean>(false);
     useEffect(() => {
         if (selected.length == 2) {
-            chessboardInstance.movePiece(selected[0], selected[1]);
+            //TODO: try catch here
+            try {
+                chessboardInstance.movePiece(selected[0], selected[1]);
+                setCheckmate(chessboardInstance.getCheckmate());
+                setTurn(chessboardInstance.getWhoseTurn());
+                setInCheck(chessboardInstance.getInCheck());
+                setErr(undefined);
+            } catch (e: any) {
+                //should only be in an error state from movePiece
+                setErr(e.message);
+            }
             setSelected([]);
             setBoard(chessboardInstance.getPieces());
         }
     }, [selected]);
 
-    const squareSize = 330;
+    const squareSize = 90;
     console.log("hello world from chessboard.tsx");
     return (
-        <div
-            style={{
-                position: "relative",
-                width: `${8 * squareSize}px`,
-                height: `${8 * squareSize}px`,
-            }}
-        >
-            <Image
-                src="/chess_pieces_png/chessboard.png"
-                alt="Chessboard"
-                layout="fill"
-                objectFit="contain"
-                // priority={true} // Ensures the background loads first
-            />
+        <>
+            <div
+                style={{
+                    position: "relative",
+                    width: `${8 * squareSize}px`,
+                    height: `${8 * squareSize}px`,
+                }}
+            >
+                <Image
+                    src="/chess_pieces_png/chessboard.png"
+                    alt="Chessboard"
+                    layout="fill"
+                    objectFit="contain"
+                    // priority={true} // Ensures the background loads first
+                />
 
-            {board.map((row: number[], rowNum: number) => (
-                <>
-                    {row.map((piece: number, colNum: number) => {
-                        const imageSrc = piecesMap.get(piece);
-                        assert.ok(imageSrc !== undefined);
-                        return (
-                            <div
-                                key={(rowNum + 1) * (colNum + 1)}
-                                style={{
-                                    position: "absolute",
-                                    top: `${rowNum * squareSize}px`,
-                                    left: `${colNum * squareSize}px`,
-                                    width: `${squareSize}px`,
-                                    height: `${squareSize}px`,
-                                }}
-                                onClick={() => {
-                                    const selection: [number, number] = [
-                                        rowNum,
-                                        colNum,
-                                    ];
-                                    console.log("selection", selection);
-                                    setSelected(selected.concat([selection]));
-                                }}
-                            >
-                                <Image
-                                    src={imageSrc}
-                                    alt={`Chess piece at ${rowNum}, ${colNum}`}
-                                    layout="responsive"
-                                    width={squareSize}
-                                    height={squareSize}
-                                />
-                            </div>
-                        );
-                    })}
-                </>
-            ))}
-        </div>
+                {board.map((row: number[], rowNum: number) => (
+                    <>
+                        {row.map((piece: number, colNum: number) => {
+                            const imageSrc = piecesMap.get(piece);
+                            assert.ok(imageSrc !== undefined);
+                            return (
+                                <div
+                                    key={(rowNum + 1) * (colNum + 1)}
+                                    style={{
+                                        position: "absolute",
+                                        top: `${rowNum * squareSize}px`,
+                                        left: `${colNum * squareSize}px`,
+                                        width: `${squareSize}px`,
+                                        height: `${squareSize}px`,
+                                    }}
+                                    onClick={() => {
+                                        if (!checkmate) {
+                                            const selection: [number, number] =
+                                                [rowNum, colNum];
+                                            console.log("selection", selection);
+                                            setSelected(
+                                                selected.concat([selection])
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <Image
+                                        src={imageSrc}
+                                        alt={`Chess piece at ${rowNum}, ${colNum}`}
+                                        layout="responsive"
+                                        width={squareSize}
+                                        height={squareSize}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </>
+                ))}
+            </div>
+            {!checkmate && (
+                <h1
+                    className={`${lusitana.className} mb-8 text-xl md:text-2xl`}
+                >
+                    {Player[turn]}'s Turn
+                    {inCheck && ", Get Out of Check!"}
+                </h1>
+            )}
+            {checkmate && (
+                <h1
+                    className={`${lusitana.className} mb-8 text-xl md:text-2xl`}
+                >
+                    {Player[-1 * turn]} Won!
+                </h1>
+            )}
+            {err && (
+                <h1
+                    className={`${lusitana.className} mb-8 text-xl md:text-2xl`}
+                >
+                    {err}
+                </h1>
+            )}
+        </>
     );
 }

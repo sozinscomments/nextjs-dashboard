@@ -4,7 +4,7 @@ import * as assert from "assert";
  * Represent a chessboard, where empty squares are 0, black pieces are negative (-1=pawn, -2=rook, -3=knight, -4=bishop, -5=queen, -6=king)
  * and white pieces are positive
  */
-enum Player {
+export enum Player {
     White = 1,
     Black = -1,
 }
@@ -790,6 +790,17 @@ export class ChessBoard {
      */
     public getPieces(): number[][] {
         return this.board.map((row) => row.slice());
+    }
+    public getWhoseTurn(): Player {
+        return this.currentTurn;
+    }
+    public getInCheck(): boolean {
+        const inCheck = this.inCheck.get(this.getWhoseTurn());
+        assert.ok(inCheck !== undefined);
+        return inCheck;
+    }
+    public getCheckmate(): boolean {
+        return this.checkmate;
     }
 }
 
