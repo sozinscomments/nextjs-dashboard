@@ -802,6 +802,28 @@ export class ChessBoard {
     public getCheckmate(): boolean {
         return this.checkmate;
     }
+    public reset(): void {
+        this.board = [
+            [-2, -3, -4, -5, -6, -4, -3, -2],
+            [-1, -1, -1, -1, -1, -1, -1, -1],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1],
+            [2, 3, 4, 5, 6, 4, 3, 2],
+        ];
+        this.currentTurn = Player.White;
+        this.inCheck = new Map<Player, boolean>([
+            [Player.Black, false],
+            [Player.White, false],
+        ]);
+        this.kings = new Map<Player, [number, number]>([
+            [Player.Black, [0, 4]],
+            [Player.White, [7, 4]],
+        ]);
+        this.checkmate = false;
+    }
 }
 
 // const readline = require("readline");

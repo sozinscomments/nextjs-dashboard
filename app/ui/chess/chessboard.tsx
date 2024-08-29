@@ -76,6 +76,16 @@ export default function Chessboard() {
         }
     }, [selected]);
 
+    function reset() {
+        setSelected([]);
+        setErr(undefined);
+        setTurn(Player.White);
+        setInCheck(false);
+        setCheckmate(false);
+        chessboardInstance.reset();
+        setBoard(chessboardInstance.getPieces());
+    }
+
     const squareSize = 90;
     console.log("hello world from chessboard.tsx");
     return (
@@ -156,6 +166,12 @@ export default function Chessboard() {
                     {err}
                 </h1>
             )}
+            <button
+                className="mt-4 rounded-md bg-blue-500 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-400"
+                onClick={reset}
+            >
+                Reset Game
+            </button>
         </>
     );
 }
